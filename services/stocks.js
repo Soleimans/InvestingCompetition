@@ -1,4 +1,5 @@
-const yahooFinance = require('yahoo-finance2').default;
+const YahooFinance = require('yahoo-finance2').default;
+const yahooFinance = new YahooFinance();
 const { pool } = require('../db');
 
 async function getStockPrice(ticker) {
@@ -14,15 +15,12 @@ async function getStockPrice(ticker) {
 async function getEurRate() {
   try {
     const result = await yahooFinance.quote('EURUSD=X');
-    // This gives EUR per 1 USD (inverted: quote is USD per EUR)
-    // We want USD->EUR, so 1/rate
     const usdPerEur = result.regularMarketPrice;
     return 1 / usdPerEur; // USD to EUR conversion
   } catch (err) {
     console.error('Failed to fetch EUR rate:', err.message);
-    // Fallback: try cached
     const cached = await pool.query("SELECT rate FROM exchange_rates WHERE pair = 'USD_EUR'");
-    return cached.rows.length > 0 ? parseFloat(cached.rows[0].rate) : 0.92; // rough fallback
+    return cached.rows.length > 0 ? parseFloat(cached.rows[0].rate) : 0.92;
   }
 }
 

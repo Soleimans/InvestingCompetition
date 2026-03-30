@@ -61,7 +61,7 @@ export default function Competition({ user }) {
     <div>
       <div className="comp-header">
         <div>
-          <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>&larr; All Competitions</Link>
+          <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>{'\u2190'} All Competitions</Link>
           <h1>{comp.name}</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

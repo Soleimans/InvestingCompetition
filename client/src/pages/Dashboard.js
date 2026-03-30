@@ -12,14 +12,7 @@ export default function Dashboard({ user }) {
     loadCompetitions();
   }, []);
 
-  // If user is in exactly one competition, redirect to it
-  useEffect(() => {
-    if (competitions.length === 1) {
-      navigate(`/competition/${competitions[0].id}`);
-    }
-  }, [competitions, navigate]);
-
-  const loadCompetitions = async () => {
+const loadCompetitions = async () => {
     try {
       const { data } = await api.get('/competitions');
       setCompetitions(data);
