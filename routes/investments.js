@@ -177,6 +177,77 @@ router.get('/:competitionId/holdings', async (req, res) => {
   }
 });
 
+// Edit a holding (ticker, shares, avg_price)
+router.put('/:competitionId/holdings', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { competitionId } = req.params;
+    const { originalTicker, ticker, shares, avgPrice } = req.body;
+
+    if (!originalTicker || !ticker || shares == null || avgPrice == null) {
+      return res.status(400).json({ error: 'originalTicker, ticker, shares, and avgPrice are required' });
+    }
+
+    const normalizedOriginal = originalTicker.toUpperCase();
+    const normalizedTicker = ticker.toUpperCase();
+
+    await client.query('BEGIN');
+
+    if (normalizedOriginal !== normalizedTicker) {
+      // Ticker changed: delete old, upsert new
+      await client.query(
+        'DELETE FROM holdings WHERE competition_id = $1 AND user_id = $2 AND ticker = $3',
+        [competitionId, req.userId, normalizedOriginal]
+      );
+      await client.query(
+        `INSERT INTO holdings (competition_id, user_id, ticker, shares, avg_price)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (competition_id, user_id, ticker)
+         DO UPDATE SET shares = $4, avg_price = $5`,
+        [competitionId, req.userId, normalizedTicker, parseFloat(shares), parseFloat(avgPrice)]
+      );
+    } else {
+      await client.query(
+        'UPDATE holdings SET shares = $4, avg_price = $5 WHERE competition_id = $1 AND user_id = $2 AND ticker = $3',
+        [competitionId, req.userId, normalizedTicker, parseFloat(shares), parseFloat(avgPrice)]
+      );
+    }
+
+    // Update price cache for the new ticker
+    const price = await getStockPrice(normalizedTicker);
+    if (price) {
+      await client.query(
+        `INSERT INTO price_cache (ticker, price_usd, updated_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (ticker) DO UPDATE SET price_usd = $2, updated_at = NOW()`,
+        [normalizedTicker, price]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Edit holding error:', err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Delete a holding
+router.delete('/:competitionId/holdings/:ticker', async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM holdings WHERE competition_id = $1 AND user_id = $2 AND ticker = $3',
+      [req.params.competitionId, req.userId, req.params.ticker.toUpperCase()]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get transactions
 router.get('/:competitionId/transactions', async (req, res) => {
   try {

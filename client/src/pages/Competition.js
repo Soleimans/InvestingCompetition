@@ -111,7 +111,7 @@ export default function Competition({ user }) {
       </div>
 
       {tab === 'chart' && <TradeForm competitionId={id} onTraded={loadData} />}
-      {tab === 'holdings' && <HoldingsTable holdings={holdings} />}
+      {tab === 'holdings' && <HoldingsTable holdings={holdings} competitionId={id} onUpdated={loadData} />}
       {tab === 'history' && <TransactionHistory transactions={transactions} />}
     </div>
   );
@@ -296,7 +296,46 @@ function TradeForm({ competitionId, onTraded }) {
   );
 }
 
-function HoldingsTable({ holdings }) {
+function HoldingsTable({ holdings, competitionId, onUpdated }) {
+  const [editing, setEditing] = useState(null); // ticker being edited
+  const [editData, setEditData] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const startEdit = (h) => {
+    setEditing(h.ticker);
+    setEditData({ ticker: h.ticker, shares: h.shares.toString(), avgPrice: h.avgPrice.toString() });
+  };
+
+  const cancelEdit = () => { setEditing(null); setEditData({}); };
+
+  const saveEdit = async (originalTicker) => {
+    setLoading(true);
+    try {
+      await api.put(`/investments/${competitionId}/holdings`, {
+        originalTicker,
+        ticker: editData.ticker,
+        shares: parseFloat(editData.shares),
+        avgPrice: parseFloat(editData.avgPrice),
+      });
+      setEditing(null);
+      onUpdated();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Save failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteHolding = async (ticker) => {
+    if (!window.confirm(`Delete ${ticker} holding?`)) return;
+    try {
+      await api.delete(`/investments/${competitionId}/holdings/${ticker}`);
+      onUpdated();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Delete failed');
+    }
+  };
+
   if (holdings.length === 0) {
     return <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No holdings yet. Buy some stocks!</div>;
   }
@@ -312,20 +351,40 @@ function HoldingsTable({ holdings }) {
             <th>Current Price</th>
             <th>Value (EUR)</th>
             <th>P/L %</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {holdings.map(h => (
-            <tr key={h.ticker}>
-              <td style={{ fontWeight: 600 }}>{h.ticker}</td>
-              <td>{h.shares.toFixed(4)}</td>
-              <td>${h.avgPrice.toFixed(2)}</td>
-              <td>${h.currentPrice.toFixed(2)}</td>
-              <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
-              <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>
-                {h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%
-              </td>
-            </tr>
+            editing === h.ticker ? (
+              <tr key={h.ticker}>
+                <td><input value={editData.ticker} onChange={e => setEditData({...editData, ticker: e.target.value.toUpperCase()})} style={{ width: '70px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
+                <td><input type="number" step="any" value={editData.shares} onChange={e => setEditData({...editData, shares: e.target.value})} style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
+                <td><input type="number" step="any" value={editData.avgPrice} onChange={e => setEditData({...editData, avgPrice: e.target.value})} style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
+                <td>${h.currentPrice.toFixed(2)}</td>
+                <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
+                <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%</td>
+                <td style={{ display: 'flex', gap: '0.25rem' }}>
+                  <button className="btn btn-sm btn-success" onClick={() => saveEdit(h.ticker)} disabled={loading}>{loading ? '...' : 'Save'}</button>
+                  <button className="btn btn-sm btn-outline" onClick={cancelEdit}>Cancel</button>
+                </td>
+              </tr>
+            ) : (
+              <tr key={h.ticker}>
+                <td style={{ fontWeight: 600 }}>{h.ticker}</td>
+                <td>{h.shares.toFixed(4)}</td>
+                <td>${h.avgPrice.toFixed(2)}</td>
+                <td>${h.currentPrice.toFixed(2)}</td>
+                <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
+                <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>
+                  {h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%
+                </td>
+                <td style={{ display: 'flex', gap: '0.25rem' }}>
+                  <button className="btn btn-sm btn-outline" onClick={() => startEdit(h)}>Edit</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => deleteHolding(h.ticker)}>X</button>
+                </td>
+              </tr>
+            )
           ))}
         </tbody>
       </table>
