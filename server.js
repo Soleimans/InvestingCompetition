@@ -43,7 +43,7 @@ app.get('{*path}', (req, res) => {
 });
 
 // Update prices every 15 minutes (market hours check optional)
-cron.schedule('*/15 * * * *', () => {
+cron.schedule('0 * * * *', () => {
   updateAllPrices();
 });
 
