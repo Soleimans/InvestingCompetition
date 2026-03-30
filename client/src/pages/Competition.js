@@ -303,19 +303,19 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
 
   const startEdit = (h) => {
     setEditing(h.ticker);
-    setEditData({ ticker: h.ticker, shares: h.shares.toString(), avgPrice: h.avgPrice.toString() });
+    setEditData({ ticker: h.ticker, shares: h.shares.toString() });
   };
 
   const cancelEdit = () => { setEditing(null); setEditData({}); };
 
-  const saveEdit = async (originalTicker) => {
+  const saveEdit = async (originalTicker, currentAvgPrice) => {
     setLoading(true);
     try {
       await api.put(`/investments/${competitionId}/holdings`, {
         originalTicker,
         ticker: editData.ticker,
         shares: parseFloat(editData.shares),
-        avgPrice: parseFloat(editData.avgPrice),
+        avgPrice: currentAvgPrice,
       });
       setEditing(null);
       onUpdated();
@@ -360,12 +360,12 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
               <tr key={h.ticker}>
                 <td><input value={editData.ticker} onChange={e => setEditData({...editData, ticker: e.target.value.toUpperCase()})} style={{ width: '70px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
                 <td><input type="number" step="any" value={editData.shares} onChange={e => setEditData({...editData, shares: e.target.value})} style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
-                <td><input type="number" step="any" value={editData.avgPrice} onChange={e => setEditData({...editData, avgPrice: e.target.value})} style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
+                <td>${h.avgPrice.toFixed(2)}</td>
                 <td>${h.currentPrice.toFixed(2)}</td>
                 <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
                 <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%</td>
                 <td style={{ display: 'flex', gap: '0.25rem' }}>
-                  <button className="btn btn-sm btn-success" onClick={() => saveEdit(h.ticker)} disabled={loading}>{loading ? '...' : 'Save'}</button>
+                  <button className="btn btn-sm btn-success" onClick={() => saveEdit(h.ticker, h.avgPrice)} disabled={loading}>{loading ? '...' : 'Save'}</button>
                   <button className="btn btn-sm btn-outline" onClick={cancelEdit}>Cancel</button>
                 </td>
               </tr>
