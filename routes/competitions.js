@@ -114,6 +114,28 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Delete competition (owner only)
+router.delete('/:id', async (req, res) => {
+  try {
+    const comp = await pool.query('SELECT * FROM competitions WHERE id = $1', [req.params.id]);
+    if (comp.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    if (comp.rows[0].created_by !== req.userId) {
+      return res.status(403).json({ error: 'Only the owner can delete this competition' });
+    }
+
+    await pool.query('DELETE FROM portfolio_snapshots WHERE competition_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM transactions WHERE competition_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM holdings WHERE competition_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM competition_members WHERE competition_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM competitions WHERE id = $1', [req.params.id]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Join competition by invite code
 router.post('/join', async (req, res) => {
   try {

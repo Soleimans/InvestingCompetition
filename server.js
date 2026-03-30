@@ -26,6 +26,16 @@ app.use('/api/auth', (req, res, next) => {
 app.use('/api/competitions', authMiddleware, competitionRoutes);
 app.use('/api/investments', authMiddleware, investmentRoutes);
 
+// Manual price refresh
+app.post('/api/refresh-prices', authMiddleware, async (req, res) => {
+  try {
+    await updateAllPrices();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Refresh failed' });
+  }
+});
+
 // Serve React build in production
 app.use(express.static(path.join(__dirname, 'client', 'build')));
 app.get('{*path}', (req, res) => {

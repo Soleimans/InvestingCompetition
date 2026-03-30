@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -67,6 +67,7 @@ export default function Competition({ user }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Invite:</span>
           <span className="invite-code" onClick={copyInviteCode} title="Click to copy">{comp.inviteCode}</span>
+          {comp.createdBy === user.id && <DeleteButton competitionId={id} />}
         </div>
       </div>
 
@@ -80,6 +81,10 @@ export default function Competition({ user }) {
 
       {/* Chart */}
       <div className="chart-container">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <div className="section-title" style={{ margin: 0 }}>Portfolio History</div>
+          <RefreshButton onRefreshed={loadData} />
+        </div>
         <PortfolioChart snapshots={snapshots} />
       </div>
 
@@ -109,6 +114,54 @@ export default function Competition({ user }) {
       {tab === 'holdings' && <HoldingsTable holdings={holdings} />}
       {tab === 'history' && <TransactionHistory transactions={transactions} />}
     </div>
+  );
+}
+
+function DeleteButton({ competitionId }) {
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/competitions/${competitionId}`);
+      navigate('/');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Delete failed');
+    }
+  };
+
+  if (confirming) {
+    return (
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.8rem', color: 'var(--red)' }}>Sure?</span>
+        <button className="btn btn-sm btn-danger" onClick={handleDelete}>Yes, delete</button>
+        <button className="btn btn-sm btn-outline" onClick={() => setConfirming(false)}>Cancel</button>
+      </div>
+    );
+  }
+
+  return <button className="btn btn-sm btn-danger" onClick={() => setConfirming(true)}>Delete</button>;
+}
+
+function RefreshButton({ onRefreshed }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      await api.post('/refresh-prices');
+      await onRefreshed();
+    } catch (err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button className="btn btn-sm btn-outline" onClick={handleRefresh} disabled={loading}>
+      {loading ? 'Updating...' : 'Refresh Prices'}
+    </button>
   );
 }
 
