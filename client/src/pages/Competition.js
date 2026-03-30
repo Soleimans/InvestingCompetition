@@ -273,11 +273,11 @@ function TradeForm({ competitionId, onTraded }) {
             <label>Input Type</label>
             <select value={mode} onChange={e => setMode(e.target.value)}>
               <option value="shares">Number of Shares</option>
-              <option value="value">Dollar Amount ($)</option>
+              <option value="value">Euro Amount (&euro;)</option>
             </select>
           </div>
           <div className="form-group">
-            <label>{mode === 'shares' ? 'Shares' : 'Amount ($)'}</label>
+            <label>{mode === 'shares' ? 'Shares' : 'Amount (\u20AC)'}</label>
             <input type="number" step="any" min="0.0001" value={amount} onChange={e => setAmount(e.target.value)} required />
           </div>
           <div className="form-group">

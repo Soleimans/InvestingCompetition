@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../db');
-const { getStockPrice } = require('../services/stocks');
+const { getStockPrice, getEurRate } = require('../services/stocks');
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.post('/:competitionId/buy', async (req, res) => {
     const { competitionId } = req.params;
     const { ticker, shares, totalValue } = req.body;
 
-    // Must provide either shares or totalValue (dollar amount)
+    // Must provide either shares or totalValue (EUR amount)
     if (!ticker || (!shares && !totalValue)) {
       return res.status(400).json({ error: 'Ticker and either shares or totalValue required' });
     }
@@ -23,11 +23,19 @@ router.post('/:competitionId/buy', async (req, res) => {
     );
     if (member.rows.length === 0) return res.status(403).json({ error: 'Not a member' });
 
-    // Get current price
+    // Get current price in USD
     const price = await getStockPrice(ticker.toUpperCase());
     if (!price) return res.status(400).json({ error: 'Could not fetch price for ticker' });
 
-    const actualShares = shares ? parseFloat(shares) : parseFloat(totalValue) / price;
+    let actualShares;
+    if (shares) {
+      actualShares = parseFloat(shares);
+    } else {
+      // totalValue is in EUR, convert to USD first
+      const eurRate = await getEurRate(); // USD -> EUR rate
+      const totalValueUsd = parseFloat(totalValue) / eurRate;
+      actualShares = totalValueUsd / price;
+    }
     const normalizedTicker = ticker.toUpperCase();
 
     await client.query('BEGIN');
@@ -89,7 +97,14 @@ router.post('/:competitionId/sell', async (req, res) => {
     const price = await getStockPrice(normalizedTicker);
     if (!price) return res.status(400).json({ error: 'Could not fetch price for ticker' });
 
-    const actualShares = shares ? parseFloat(shares) : parseFloat(totalValue) / price;
+    let actualShares;
+    if (shares) {
+      actualShares = parseFloat(shares);
+    } else {
+      const eurRate = await getEurRate();
+      const totalValueUsd = parseFloat(totalValue) / eurRate;
+      actualShares = totalValueUsd / price;
+    }
 
     // Check current holdings
     const holding = await pool.query(
