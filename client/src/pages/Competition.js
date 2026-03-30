@@ -359,10 +359,10 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
             editing === h.ticker ? (
               <tr key={h.ticker}>
                 <td><input value={editData.ticker} onChange={e => setEditData({...editData, ticker: e.target.value.toUpperCase()})} style={{ width: '70px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
-                <td><input type="number" step="any" value={editData.shares} onChange={e => setEditData({...editData, shares: e.target.value})} style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
+                <td><input type="number" step="any" min="0" value={editData.shares} onChange={e => setEditData({...editData, shares: e.target.value})} style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
                 <td>${h.avgPrice.toFixed(2)}</td>
                 <td>${h.currentPrice.toFixed(2)}</td>
-                <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
+                <td style={{ fontFamily: 'monospace' }}>{formatEur(h.shares > 0 ? (parseFloat(editData.shares) || 0) * (h.currentValueEur / h.shares) : 0)}</td>
                 <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%</td>
                 <td style={{ display: 'flex', gap: '0.25rem' }}>
                   <button className="btn btn-sm btn-success" onClick={() => saveEdit(h.ticker, h.avgPrice)} disabled={loading}>{loading ? '...' : 'Save'}</button>

@@ -188,8 +188,19 @@ router.put('/:competitionId/holdings', async (req, res) => {
       return res.status(400).json({ error: 'originalTicker, ticker, shares, and avgPrice are required' });
     }
 
+    const parsedShares = parseFloat(shares);
+    if (parsedShares < 0) {
+      return res.status(400).json({ error: 'Shares cannot be negative' });
+    }
+
     const normalizedOriginal = originalTicker.toUpperCase();
     const normalizedTicker = ticker.toUpperCase();
+
+    // Validate ticker exists by fetching its price
+    const price = await getStockPrice(normalizedTicker);
+    if (!price) {
+      return res.status(400).json({ error: `Ticker "${normalizedTicker}" not found` });
+    }
 
     await client.query('BEGIN');
 
@@ -204,24 +215,21 @@ router.put('/:competitionId/holdings', async (req, res) => {
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (competition_id, user_id, ticker)
          DO UPDATE SET shares = $4, avg_price = $5`,
-        [competitionId, req.userId, normalizedTicker, parseFloat(shares), parseFloat(avgPrice)]
+        [competitionId, req.userId, normalizedTicker, parsedShares, parseFloat(avgPrice)]
       );
     } else {
       await client.query(
         'UPDATE holdings SET shares = $4, avg_price = $5 WHERE competition_id = $1 AND user_id = $2 AND ticker = $3',
-        [competitionId, req.userId, normalizedTicker, parseFloat(shares), parseFloat(avgPrice)]
+        [competitionId, req.userId, normalizedTicker, parsedShares, parseFloat(avgPrice)]
       );
     }
 
-    // Update price cache for the new ticker
-    const price = await getStockPrice(normalizedTicker);
-    if (price) {
-      await client.query(
-        `INSERT INTO price_cache (ticker, price_usd, updated_at) VALUES ($1, $2, NOW())
-         ON CONFLICT (ticker) DO UPDATE SET price_usd = $2, updated_at = NOW()`,
-        [normalizedTicker, price]
-      );
-    }
+    // Update price cache
+    await client.query(
+      `INSERT INTO price_cache (ticker, price_usd, updated_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (ticker) DO UPDATE SET price_usd = $2, updated_at = NOW()`,
+      [normalizedTicker, price]
+    );
 
     await client.query('COMMIT');
     res.json({ success: true });
