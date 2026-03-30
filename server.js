@@ -37,14 +37,17 @@ cron.schedule('*/15 * * * *', () => {
   updateAllPrices();
 });
 
-async function start() {
-  await initDB();
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+// Start server first, then init DB (so Railway sees a listening port)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 
-  // Initial price update
-  setTimeout(() => updateAllPrices(), 5000);
-}
-
-start().catch(console.error);
+  // Init DB after server is listening
+  initDB()
+    .then(() => {
+      console.log('DB ready');
+      setTimeout(() => updateAllPrices(), 5000);
+    })
+    .catch((err) => {
+      console.error('DB init error (will retry on first request):', err.message);
+    });
+});
