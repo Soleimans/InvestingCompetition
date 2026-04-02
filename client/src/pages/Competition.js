@@ -363,7 +363,7 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
                 <td>${h.avgPrice.toFixed(2)}</td>
                 <td>${h.currentPrice.toFixed(2)}</td>
                 <td style={{ fontFamily: 'monospace' }}>{formatEur(h.shares > 0 ? (parseFloat(editData.shares) || 0) * (h.currentValueEur / h.shares) : 0)}</td>
-                <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%</td>
+                {(() => { const es = parseFloat(editData.shares) || 0; const eurPerShare = h.shares > 0 ? h.currentValueEur / h.shares : 0; const costPerShareEur = h.shares > 0 ? h.avgPrice * (h.currentValueEur / (h.shares * h.currentPrice)) : 0; const plEur = es * (eurPerShare - costPerShareEur); return <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}% ({plEur >= 0 ? '+' : ''}{formatEur(plEur)})</td>; })()}
                 <td style={{ display: 'flex', gap: '0.25rem' }}>
                   <button className="btn btn-sm btn-success" onClick={() => saveEdit(h.ticker, h.avgPrice)} disabled={loading}>{loading ? '...' : 'Save'}</button>
                   <button className="btn btn-sm btn-outline" onClick={cancelEdit}>Cancel</button>
@@ -376,9 +376,7 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
                 <td>${h.avgPrice.toFixed(2)}</td>
                 <td>${h.currentPrice.toFixed(2)}</td>
                 <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
-                <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>
-                  {h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%
-                </td>
+                {(() => { const eurPerShare = h.shares > 0 ? h.currentValueEur / h.shares : 0; const costPerShareEur = h.shares > 0 ? h.avgPrice * (h.currentValueEur / (h.shares * h.currentPrice)) : 0; const plEur = h.shares * (eurPerShare - costPerShareEur); return <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}% ({plEur >= 0 ? '+' : ''}{formatEur(plEur)})</td>; })()}
                 <td style={{ display: 'flex', gap: '0.25rem' }}>
                   <button className="btn btn-sm btn-outline" onClick={() => startEdit(h)}>Edit</button>
                   <button className="btn btn-sm btn-danger" onClick={() => deleteHolding(h.ticker)}>X</button>
