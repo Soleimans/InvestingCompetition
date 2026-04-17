@@ -292,14 +292,14 @@ function TickerSearch({ value, onChange }) {
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', marginTop: '2px', maxHeight: '240px', overflowY: 'auto' }}>
           {searching && <div style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Searching...</div>}
           {results.map(r => (
-            <div key={r.symbol} onMouseDown={() => select(r)} style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}
+            <div key={r.symbol} onMouseDown={() => select(r)} style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <div>
                 <span style={{ fontWeight: 600, fontFamily: 'monospace', marginRight: '0.5rem' }}>{r.symbol}</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{r.name}</span>
               </div>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{r.exchange} · {r.type}</span>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{r.exchange} · {r.type}</div>
             </div>
           ))}
         </div>
