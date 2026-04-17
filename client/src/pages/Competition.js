@@ -239,6 +239,75 @@ const TICKER_NAMES = Object.fromEntries(
   SWEDBANK_FUNDS.map(f => [f.ticker, `Swedbank ${f.name}`])
 );
 
+function TickerSearch({ value, onChange }) {
+  const [query, setQuery] = useState(value);
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen] = useState(false);
+  const debounceRef = React.useRef(null);
+  const wrapperRef = React.useRef(null);
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    const handler = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleInput = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    onChange(val.toUpperCase());
+    setOpen(true);
+    clearTimeout(debounceRef.current);
+    if (val.length < 2) { setResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const { data } = await api.get(`/search-ticker?q=${encodeURIComponent(val)}`);
+        setResults(data);
+      } catch { setResults([]); }
+      finally { setSearching(false); }
+    }, 350);
+  };
+
+  const select = (result) => {
+    setQuery(result.symbol);
+    onChange(result.symbol);
+    setResults([]);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative' }}>
+      <input
+        value={query}
+        onChange={handleInput}
+        onFocus={() => results.length > 0 && setOpen(true)}
+        placeholder="AAPL or Apple Inc."
+        required
+        autoComplete="off"
+      />
+      {open && (results.length > 0 || searching) && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', marginTop: '2px', maxHeight: '240px', overflowY: 'auto' }}>
+          {searching && <div style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Searching...</div>}
+          {results.map(r => (
+            <div key={r.symbol} onMouseDown={() => select(r)} style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <div>
+                <span style={{ fontWeight: 600, fontFamily: 'monospace', marginRight: '0.5rem' }}>{r.symbol}</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{r.name}</span>
+              </div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{r.exchange} · {r.type}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TradeForm({ competitionId, onTraded }) {
   const [broker, setBroker] = useState('Trading212');
   const [ticker, setTicker] = useState('');
@@ -291,7 +360,7 @@ function TradeForm({ competitionId, onTraded }) {
             </select>
           </div>
           <div className="form-group">
-            <label>{broker === 'Swedbank' ? 'Fund' : 'Ticker'}</label>
+            <label>{broker === 'Swedbank' ? 'Fund' : 'Stock / Ticker'}</label>
             {broker === 'Swedbank' ? (
               <select value={swedbankFund} onChange={e => setSwedbankFund(e.target.value)}>
                 {SWEDBANK_FUNDS.map(f => (
@@ -299,7 +368,7 @@ function TradeForm({ competitionId, onTraded }) {
                 ))}
               </select>
             ) : (
-              <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase())} placeholder="AAPL" required />
+              <TickerSearch value={ticker} onChange={setTicker} />
             )}
           </div>
           <div className="form-group">

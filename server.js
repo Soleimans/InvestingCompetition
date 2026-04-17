@@ -8,7 +8,7 @@ const authMiddleware = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const competitionRoutes = require('./routes/competitions');
 const investmentRoutes = require('./routes/investments');
-const { updateAllPrices } = require('./services/stocks');
+const { updateAllPrices, searchTickers } = require('./services/stocks');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,6 +25,18 @@ app.use('/api/auth', (req, res, next) => {
 // Protected routes
 app.use('/api/competitions', authMiddleware, competitionRoutes);
 app.use('/api/investments', authMiddleware, investmentRoutes);
+
+// Ticker search
+app.get('/api/search-ticker', authMiddleware, async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.length < 2) return res.json([]);
+  try {
+    const results = await searchTickers(q);
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
 
 // Manual price refresh
 app.post('/api/refresh-prices', authMiddleware, async (req, res) => {

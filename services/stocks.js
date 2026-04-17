@@ -114,4 +114,22 @@ async function takeSnapshots() {
   }
 }
 
-module.exports = { getStockPrice, getEurRate, updateAllPrices };
+async function searchTickers(query) {
+  try {
+    const result = await yahooFinance.search(query);
+    return (result.quotes || [])
+      .filter(q => q.symbol && q.typeDisp !== 'Future' && q.typeDisp !== 'Currency')
+      .slice(0, 10)
+      .map(q => ({
+        symbol: q.symbol,
+        name: q.shortname || q.longname || q.symbol,
+        exchange: q.exchDisp || q.exchange || '',
+        type: q.typeDisp || q.quoteType || '',
+      }));
+  } catch (err) {
+    console.error('Search error:', err.message);
+    return [];
+  }
+}
+
+module.exports = { getStockPrice, getEurRate, updateAllPrices, searchTickers };
