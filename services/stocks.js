@@ -116,8 +116,14 @@ async function takeSnapshots() {
 
 async function searchTickers(query) {
   try {
-    const result = await yahooFinance.search(query, { quotesCount: 25 });
-    const filtered = (result.quotes || [])
+    // Run normal search and a direct .MU probe in parallel
+    const muSymbol = query.toUpperCase().replace(/\.MU$/i, '') + '.MU';
+    const [searchResult, muQuote] = await Promise.all([
+      yahooFinance.search(query, { quotesCount: 25 }),
+      yahooFinance.quote(muSymbol).catch(() => null),
+    ]);
+
+    const filtered = (searchResult.quotes || [])
       .filter(q => q.symbol && q.typeDisp !== 'Future' && q.typeDisp !== 'Currency')
       .map(q => ({
         symbol: q.symbol,
@@ -126,13 +132,26 @@ async function searchTickers(query) {
         type: q.typeDisp || q.quoteType || '',
       }));
 
+    // Inject .MU result at the top if found and not already in results
+    if (muQuote && muQuote.regularMarketPrice) {
+      const alreadyPresent = filtered.some(r => r.symbol === muSymbol);
+      if (!alreadyPresent) {
+        filtered.unshift({
+          symbol: muSymbol,
+          name: muQuote.shortName || muQuote.longName || muSymbol,
+          exchange: 'Munich (GETTEX)',
+          type: muQuote.quoteType || 'Equity',
+        });
+      }
+    }
+
     const priority = (r) => {
-      if (r.symbol.endsWith('.MU')) return 0; // Munich/GETTEX — most accurate for GETTEX trades
-      if (r.symbol.endsWith('.DE')) return 1; // XETRA
-      if (r.symbol.endsWith('.F'))  return 2; // Frankfurt
-      if (r.symbol.endsWith('.ST')) return 3; // Stockholm
-      if (r.symbol.endsWith('.L'))  return 4; // London
-      if (!r.symbol.includes('.'))  return 5; // US listings (NASDAQ/NYSE)
+      if (r.symbol.endsWith('.MU')) return 0;
+      if (r.symbol.endsWith('.DE')) return 1;
+      if (r.symbol.endsWith('.F'))  return 2;
+      if (r.symbol.endsWith('.ST')) return 3;
+      if (r.symbol.endsWith('.L'))  return 4;
+      if (!r.symbol.includes('.'))  return 5;
       return 6;
     };
 
