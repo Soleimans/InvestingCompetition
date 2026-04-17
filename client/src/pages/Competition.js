@@ -312,7 +312,6 @@ function TradeForm({ competitionId, onTraded }) {
   const [broker, setBroker] = useState('Trading212');
   const [ticker, setTicker] = useState('');
   const [swedbankFund, setSwedbankFund] = useState(SWEDBANK_FUNDS[0].ticker);
-  const [mode, setMode] = useState('shares');
   const [amount, setAmount] = useState('');
   const [action, setAction] = useState('BUY');
   const [loading, setLoading] = useState(false);
@@ -328,9 +327,7 @@ function TradeForm({ competitionId, onTraded }) {
     setLoading(true);
     try {
       const endpoint = action === 'BUY' ? 'buy' : 'sell';
-      const body = { ticker: activeTicker };
-      if (mode === 'shares') body.shares = parseFloat(amount);
-      else body.totalValue = parseFloat(amount);
+      const body = { ticker: activeTicker, totalValue: parseFloat(amount) };
 
       const { data } = await api.post(`/investments/${competitionId}/${endpoint}`, body);
       const displayName = TICKER_NAMES[data.ticker] || data.ticker;
@@ -372,15 +369,8 @@ function TradeForm({ competitionId, onTraded }) {
             )}
           </div>
           <div className="form-group">
-            <label>Input Type</label>
-            <select value={mode} onChange={e => setMode(e.target.value)}>
-              <option value="shares">Number of Shares</option>
-              <option value="value">Euro Amount (&euro;)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>{mode === 'shares' ? 'Shares' : 'Amount (\u20AC)'}</label>
-            <input type="number" step="any" min="0.0001" value={amount} onChange={e => setAmount(e.target.value)} required />
+            <label>Amount (&euro;)</label>
+            <input type="number" step="any" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required />
           </div>
           <div className="form-group">
             <label>Action</label>
