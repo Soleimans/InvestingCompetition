@@ -347,10 +347,8 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
           <tr>
             <th>Ticker</th>
             <th>Shares</th>
-            <th>Avg Price</th>
             <th>Current Price</th>
             <th>Value (EUR)</th>
-            <th>P/L %</th>
             <th></th>
           </tr>
         </thead>
@@ -360,10 +358,8 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
               <tr key={h.ticker}>
                 <td><input value={editData.ticker} onChange={e => setEditData({...editData, ticker: e.target.value.toUpperCase()})} style={{ width: '70px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
                 <td><input type="number" step="0.0001" min="0" value={editData.shares} onChange={e => setEditData({...editData, shares: e.target.value})} style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', padding: '0.25rem 0.4rem', fontSize: '0.85rem' }} /></td>
-                <td>${h.avgPrice.toFixed(2)}</td>
                 <td>${h.currentPrice.toFixed(2)}</td>
                 <td style={{ fontFamily: 'monospace' }}>{formatEur(h.shares > 0 ? (parseFloat(editData.shares) || 0) * (h.currentValueEur / h.shares) : 0)}</td>
-                {(() => { const es = parseFloat(editData.shares) || 0; const eurPerShare = h.shares > 0 ? h.currentValueEur / h.shares : 0; const costPerShareEur = h.shares > 0 ? h.avgPrice * (h.currentValueEur / (h.shares * h.currentPrice)) : 0; const plEur = es * (eurPerShare - costPerShareEur); return <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}% ({plEur >= 0 ? '+' : ''}{formatEur(plEur)})</td>; })()}
                 <td style={{ display: 'flex', gap: '0.25rem' }}>
                   <button className="btn btn-sm btn-success" onClick={() => saveEdit(h.ticker, h.avgPrice)} disabled={loading}>{loading ? '...' : 'Save'}</button>
                   <button className="btn btn-sm btn-outline" onClick={cancelEdit}>Cancel</button>
@@ -373,10 +369,8 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
               <tr key={h.ticker}>
                 <td style={{ fontWeight: 600 }}>{h.ticker}</td>
                 <td>{h.shares.toFixed(4)}</td>
-                <td>${h.avgPrice.toFixed(2)}</td>
                 <td>${h.currentPrice.toFixed(2)}</td>
                 <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
-                {(() => { const eurPerShare = h.shares > 0 ? h.currentValueEur / h.shares : 0; const costPerShareEur = h.shares > 0 ? h.avgPrice * (h.currentValueEur / (h.shares * h.currentPrice)) : 0; const plEur = h.shares * (eurPerShare - costPerShareEur); return <td className={h.gainLossPct >= 0 ? 'positive' : 'negative'}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}% ({plEur >= 0 ? '+' : ''}{formatEur(plEur)})</td>; })()}
                 <td style={{ display: 'flex', gap: '0.25rem' }}>
                   <button className="btn btn-sm btn-outline" onClick={() => startEdit(h)}>Edit</button>
                   <button className="btn btn-sm btn-danger" onClick={() => deleteHolding(h.ticker)}>X</button>
