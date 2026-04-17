@@ -2,10 +2,35 @@ const YahooFinance = require('yahoo-finance2').default;
 const yahooFinance = new YahooFinance();
 const { pool } = require('../db');
 
+// Returns price normalised to USD regardless of the ticker's native currency.
+// OMXS.L is quoted in GBp (pence), so we fetch GBPUSD and convert.
 async function getStockPrice(ticker) {
   try {
     const result = await yahooFinance.quote(ticker);
-    return result.regularMarketPrice || null;
+    const price = result.regularMarketPrice;
+    const currency = result.currency;
+
+    if (!price) return null;
+
+    // GBp (pence) → USD
+    if (currency === 'GBp') {
+      const gbpUsd = await yahooFinance.quote('GBPUSD=X');
+      return (price / 100) * (gbpUsd.regularMarketPrice || 1.27);
+    }
+
+    // GBP → USD
+    if (currency === 'GBP') {
+      const gbpUsd = await yahooFinance.quote('GBPUSD=X');
+      return price * (gbpUsd.regularMarketPrice || 1.27);
+    }
+
+    // EUR → USD
+    if (currency === 'EUR') {
+      const eurUsd = await yahooFinance.quote('EURUSD=X');
+      return price * (eurUsd.regularMarketPrice || 1.08);
+    }
+
+    return price; // already USD
   } catch (err) {
     console.error(`Failed to fetch price for ${ticker}:`, err.message);
     return null;

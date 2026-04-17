@@ -226,14 +226,31 @@ function PortfolioChart({ snapshots }) {
   );
 }
 
+const SWEDBANK_FUNDS = [
+  { name: 'Access Edge Sweden',  ticker: 'OMXS.L' },
+  { name: 'Access Edge Europe',  ticker: 'IEUR'   },
+  { name: 'Access Edge Global',  ticker: 'URTH'   },
+  { name: 'Access Edge USA',     ticker: 'PBUS'   },
+  { name: 'Access Asia',         ticker: 'AAXJ'   },
+];
+
+// Map proxy tickers back to friendly names for display
+const TICKER_NAMES = Object.fromEntries(
+  SWEDBANK_FUNDS.map(f => [f.ticker, `Swedbank ${f.name}`])
+);
+
 function TradeForm({ competitionId, onTraded }) {
+  const [broker, setBroker] = useState('Trading212');
   const [ticker, setTicker] = useState('');
-  const [mode, setMode] = useState('shares'); // 'shares' or 'value'
+  const [swedbankFund, setSwedbankFund] = useState(SWEDBANK_FUNDS[0].ticker);
+  const [mode, setMode] = useState('shares');
   const [amount, setAmount] = useState('');
   const [action, setAction] = useState('BUY');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  const activeTicker = broker === 'Swedbank' ? swedbankFund : ticker;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -242,12 +259,13 @@ function TradeForm({ competitionId, onTraded }) {
     setLoading(true);
     try {
       const endpoint = action === 'BUY' ? 'buy' : 'sell';
-      const body = { ticker };
+      const body = { ticker: activeTicker };
       if (mode === 'shares') body.shares = parseFloat(amount);
       else body.totalValue = parseFloat(amount);
 
       const { data } = await api.post(`/investments/${competitionId}/${endpoint}`, body);
-      setMessage(`${action === 'BUY' ? 'Bought' : 'Sold'} ${data.shares.toFixed(4)} shares of ${data.ticker} at $${data.pricePerShare.toFixed(2)}`);
+      const displayName = TICKER_NAMES[data.ticker] || data.ticker;
+      setMessage(`${action === 'BUY' ? 'Bought' : 'Sold'} ${data.shares.toFixed(4)} units of ${displayName}`);
       setTicker('');
       setAmount('');
       onTraded();
@@ -266,8 +284,23 @@ function TradeForm({ competitionId, onTraded }) {
       <form onSubmit={handleSubmit}>
         <div className="trade-form">
           <div className="form-group">
-            <label>Ticker</label>
-            <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase())} placeholder="AAPL" required />
+            <label>Broker</label>
+            <select value={broker} onChange={e => setBroker(e.target.value)}>
+              <option value="Trading212">Trading 212</option>
+              <option value="Swedbank">Swedbank</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>{broker === 'Swedbank' ? 'Fund' : 'Ticker'}</label>
+            {broker === 'Swedbank' ? (
+              <select value={swedbankFund} onChange={e => setSwedbankFund(e.target.value)}>
+                {SWEDBANK_FUNDS.map(f => (
+                  <option key={f.ticker} value={f.ticker}>{f.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase())} placeholder="AAPL" required />
+            )}
           </div>
           <div className="form-group">
             <label>Input Type</label>
@@ -367,7 +400,7 @@ function HoldingsTable({ holdings, competitionId, onUpdated }) {
               </tr>
             ) : (
               <tr key={h.ticker}>
-                <td style={{ fontWeight: 600 }}>{h.ticker}</td>
+                <td style={{ fontWeight: 600 }}>{TICKER_NAMES[h.ticker] || h.ticker}</td>
                 <td>{h.shares.toFixed(4)}</td>
                 <td>${h.currentPrice.toFixed(2)}</td>
                 <td style={{ fontFamily: 'monospace' }}>{formatEur(h.currentValueEur)}</td>
