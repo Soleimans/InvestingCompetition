@@ -116,16 +116,27 @@ async function takeSnapshots() {
 
 async function searchTickers(query) {
   try {
-    const result = await yahooFinance.search(query);
-    return (result.quotes || [])
+    const result = await yahooFinance.search(query, { quotesCount: 25 });
+    const filtered = (result.quotes || [])
       .filter(q => q.symbol && q.typeDisp !== 'Future' && q.typeDisp !== 'Currency')
-      .slice(0, 10)
       .map(q => ({
         symbol: q.symbol,
         name: q.shortname || q.longname || q.symbol,
         exchange: q.exchDisp || q.exchange || '',
         type: q.typeDisp || q.quoteType || '',
       }));
+
+    const priority = (r) => {
+      if (r.symbol.endsWith('.MU')) return 0; // Munich/GETTEX — most accurate for GETTEX trades
+      if (r.symbol.endsWith('.DE')) return 1; // XETRA
+      if (r.symbol.endsWith('.F'))  return 2; // Frankfurt
+      if (r.symbol.endsWith('.ST')) return 3; // Stockholm
+      if (r.symbol.endsWith('.L'))  return 4; // London
+      if (!r.symbol.includes('.'))  return 5; // US listings (NASDAQ/NYSE)
+      return 6;
+    };
+
+    return filtered.sort((a, b) => priority(a) - priority(b)).slice(0, 12);
   } catch (err) {
     console.error('Search error:', err.message);
     return [];
